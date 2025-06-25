@@ -1,1 +1,1 @@
-# pySize
+# image-by-size
