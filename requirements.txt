@@ -1,4 +1,8 @@
 pytest
-numpy
-opencv-python
+requests
+beautifulsoup4
+selenium
+lxml
+schedule
+pyautogui
 importlib
