@@ -45,6 +45,9 @@ def scrap_lyrics(url: str) -> None:
 
 
 def record_word_count() -> None:
+
+    
+
     return None
 
 
