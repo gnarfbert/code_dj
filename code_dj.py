@@ -21,17 +21,25 @@ def setup() -> None:
     
         
 
-def scrap_lyrics(url: str) -> str:
+def get_song_lyrics(url: str) -> str:
     if 'genius.com' in url and 'lyrics' in url:    
         response = rq.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
-        lyric_text = soup.find('div', class_= LYRICS_CONTAINER).text
-        lyric_text = lyric_text.split('Read More')[1]
 
-        if lyric_text:
+        lyrics = ''
+
+        html_containers = soup.find('div', class_= LYRICS_CONTAINER).contents
+
+        for span in html_containers:
+            lyrics += span.text
+
+
+        lyrics = lyrics.split('Read More')[1]
+
+        if lyrics:
             with open('lyrics.txt', 'w', encoding='utf-8') as file:
-                file.write(lyric_text)
-                return lyric_text
+                file.write(lyrics)
+                return lyrics
 
     else:
         print('oopsies! you have inputted an unsupported link. try to upload a link from Genius.')
@@ -43,7 +51,7 @@ def record_word_count(url: str) -> list:
     global common_phrases
     word_frequency = {}
 
-    lyrics = scrap_lyrics(url)
+    lyrics = get_song_lyrics(url)
     lyrics_list = lyrics.split(' ')
 
     for word in lyrics_list:
@@ -68,7 +76,7 @@ def get_song_genre(url:str) -> str:
     if 'genius' in url and 'lyrics' in url:
         response = rq.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
-        genre = soup.find('div', class_= SONG_TAGS_CONTAINER).text
+        genre = soup.find('div', class_= SONG_TAGS_CONTAINER).contents[0].text
         
         return genre
     
@@ -77,16 +85,33 @@ def get_song_genre(url:str) -> str:
 
 
 
-def find_similar_song_genre() -> list:
-    with open('spotify_songs.csv', 'r') as file:
+def get_similar_songs(genre:str) -> list:
+    similar_songs = []
+    with open('spotify_songs.csv', 'r', encoding= 'utf-8') as file:
         file.readline()
 
+        while True:
+            line = file.readline()
+            if line == '':
+                break
+            
+            song_information = line.split(',')
 
-        return None
+            if song_information[9].lower() == genre.lower():
+                similar_songs.append((song_information[1], song_information[2]))
+
+
+        return similar_songs
 
 
 
 def compare_songs_by_lyrics(url:str) -> list:
+
+    frequent_lyric_count = record_word_count(url)
+    target_genre = get_song_genre(url)
+    similar_songs = get_similar_songs(target_genre)
+
+    
     return None
 
 
@@ -96,6 +121,8 @@ setup()
 
 print(record_word_count('https://genius.com/Clipse-so-be-it-lyrics'))
 
-print(get_song_genre('https://genius.com/Clipse-so-be-it-lyrics'))
+# print(get_song_genre('https://genius.com/Clipse-so-be-it-lyrics'))
+
+
 
 
