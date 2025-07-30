@@ -1,4 +1,5 @@
 import requests as rq
+import re
 from bs4 import BeautifulSoup 
 from heapq import heappop, heappush
 
@@ -17,7 +18,7 @@ def setup() -> None:
     with open('words_to_avoid.csv', 'r') as file:
         word_list = file.readline().split(',')
         for word in word_list:
-            common_phrases.add(word)
+            common_phrases.add(word.lower())
     
         
 
@@ -26,19 +27,14 @@ def get_song_lyrics(url: str) -> str:
         response = rq.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        lyrics = ''
+        lyric_container = soup.find('div', class_= LYRICS_CONTAINER).get_text(separator=' ')
 
-        html_containers = soup.find('div', class_= LYRICS_CONTAINER).contents
-
-        for span in html_containers:
-            lyrics += span.text
-
-
-        lyrics = lyrics.split('Read More')[1]
+        lyrics = lyric_container.split('Read More')[1]
 
         if lyrics:
             with open('lyrics.txt', 'w', encoding='utf-8') as file:
                 file.write(lyrics)
+
                 return lyrics
 
     else:
@@ -56,7 +52,7 @@ def record_word_count(url: str) -> list:
 
     for word in lyrics_list:
         if word.lower() not in common_phrases:
-            word_frequency[word] = 1 + word_frequency.get(word, 0)   
+            word_frequency[word] = 1 + word_frequency.get(word, 0)  
 
     max_heap = []
 
@@ -85,7 +81,7 @@ def get_song_genre(url:str) -> str:
 
 
 
-def get_similar_songs(genre:str) -> list:
+def get_similar_songs(target_genre:str) -> list:
     similar_songs = []
     with open('spotify_songs.csv', 'r', encoding= 'utf-8') as file:
         file.readline()
@@ -96,9 +92,15 @@ def get_similar_songs(genre:str) -> list:
                 break
             
             song_information = line.split(',')
+            
+            song_genre = song_information[9]
 
-            if song_information[9].lower() == genre.lower():
-                similar_songs.append((song_information[1], song_information[2]))
+            if song_genre.lower() == target_genre.lower():
+                
+                song_name = song_information[1]
+                song_artist = song_information[2]
+                
+                similar_songs.append((song_name, song_artist))
 
 
         return similar_songs
@@ -111,7 +113,21 @@ def compare_songs_by_lyrics(url:str) -> list:
     target_genre = get_song_genre(url)
     similar_songs = get_similar_songs(target_genre)
 
-    
+
+
+    for song in similar_songs:
+
+        song_name, song_artist = song
+
+
+
+        query = f'https://www.genius.com-{song_artist}-{song_name}'
+
+
+
+
+
+
     return None
 
 
@@ -119,9 +135,14 @@ def compare_songs_by_lyrics(url:str) -> list:
 
 setup()
 
+
 print(record_word_count('https://genius.com/Clipse-so-be-it-lyrics'))
 
 # print(get_song_genre('https://genius.com/Clipse-so-be-it-lyrics'))
+
+# get_song_lyrics('https://genius.com/Clipse-so-be-it-lyrics')
+
+compare_songs_by_lyrics('https://genius.com/Clipse-so-be-it-lyrics')
 
 
 
