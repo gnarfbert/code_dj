@@ -1,27 +1,19 @@
 import requests as rq
-import re
+import spacy
 from bs4 import BeautifulSoup 
-from heapq import heappop, heappush
+from spacy.lang.en import stop_words
 
 
+nlp = spacy.load("en_core_web_md")
 
-global common_phrases
-common_phrases = set()
+
 
 LYRICS_CONTAINER = 'Lyrics__Container-sc-3d1d18a3-1 bjajog'
 SONG_TAGS_CONTAINER = 'SongTags__Container-sc-b55131f0-1 SEhjw'
 
 
-def setup() -> None:
-    global common_phrases
-
-    with open('words_to_avoid.csv', 'r') as file:
-        word_list = file.readline().split(',')
-        for word in word_list:
-            common_phrases.add(word.lower())
     
-        
-
+    
 def get_song_lyrics(url: str) -> str:
     if 'genius.com' in url and 'lyrics' in url:    
         response = rq.get(url)
@@ -42,29 +34,14 @@ def get_song_lyrics(url: str) -> str:
 
 
 
-def record_word_count(url: str) -> list:
+def compare_lyrics_similarity(song1: str, song2:str) -> int:
+    lyrics1 = nlp(song1)
+    lyrics2 = nlp(song2)
+    filtered_lyrics1 = nlp(' '.join([str(word) for word in lyrics1 if not word.is_stop]))
+    filtered_lyrics2 = nlp(' '.join([str(word) for word in lyrics2 if not word.is_stop]))
 
-    global common_phrases
-    word_frequency = {}
 
-    lyrics = get_song_lyrics(url)
-    lyrics_list = lyrics.split(' ')
-
-    for word in lyrics_list:
-        if word.lower() not in common_phrases:
-            word_frequency[word] = 1 + word_frequency.get(word, 0)  
-
-    max_heap = []
-
-    for key in word_frequency.keys():
-        heappush(max_heap, (-1 * word_frequency[key], key))
-    
-    top_five_frequent_words = []
-
-    while len(top_five_frequent_words) < 5:
-        top_five_frequent_words.append(heappop(max_heap)[1])
-
-    return top_five_frequent_words
+    return filtered_lyrics1.similarity(filtered_lyrics2)
 
 
 def get_song_genre(url:str) -> str:
@@ -81,7 +58,7 @@ def get_song_genre(url:str) -> str:
 
 
 
-def get_similar_songs(target_genre:str) -> list:
+def get_similar_songs(target_genre:str,target_artist:str) -> list:
     similar_songs = []
     with open('spotify_songs.csv', 'r', encoding= 'utf-8') as file:
         file.readline()
@@ -94,14 +71,14 @@ def get_similar_songs(target_genre:str) -> list:
             song_information = line.split(',')
             
             song_genre = song_information[9]
+            song_artist = song_information[2]
 
-            if song_genre.lower() == target_genre.lower():
+            if (song_genre.lower() == target_genre.lower() and 
+                song_artist.lower() == target_artist.lower()):
                 
                 song_name = song_information[1]
-                song_artist = song_information[2]
                 
                 similar_songs.append((song_name, song_artist))
-
 
         return similar_songs
 
@@ -109,9 +86,11 @@ def get_similar_songs(target_genre:str) -> list:
 
 def compare_songs_by_lyrics(url:str) -> list:
 
-    frequent_lyric_count = record_word_count(url)
+    recommended_songs = []
+
+    frequent_lyric_count = compare_lyrics_similarity(url)
     target_genre = get_song_genre(url)
-    similar_songs = get_similar_songs(target_genre)
+    similar_songs = get_similar_songs(target_genre, 'drake')
 
 
 
@@ -119,30 +98,46 @@ def compare_songs_by_lyrics(url:str) -> list:
 
         song_name, song_artist = song
 
+        song_artist = song_artist.replace(' ', '-')
+
+        song_name = re.sub('\s*\(feat\..*?\)\s*', '',song_name).replace(' ', '-')
+
+        query = f'https://www.genius.com/{song_artist}-{song_name}-lyrics'
+        
+
+        try:
+            similar_song_lyrics = sorted(get_song_lyrics(query))
+            frequent_lyric_count = sorted(frequent_lyric_count)
 
 
-        query = f'https://www.genius.com-{song_artist}-{song_name}'
+        except IndexError:
+            continue
+        except AttributeError:
+            continue
 
 
 
 
 
 
-    return None
+    print(recommended_songs)
 
 
 
 
-setup()
 
-
-print(record_word_count('https://genius.com/Clipse-so-be-it-lyrics'))
+# print(record_word_count('https://genius.com/Clipse-so-be-it-lyrics'))
 
 # print(get_song_genre('https://genius.com/Clipse-so-be-it-lyrics'))
 
 # get_song_lyrics('https://genius.com/Clipse-so-be-it-lyrics')
 
-compare_songs_by_lyrics('https://genius.com/Clipse-so-be-it-lyrics')
+# compare_songs_by_lyrics('https://genius.com/Clipse-so-be-it-lyrics')
+
+# get_similar_songs('rap','drake')
+
+
+compare_lyrics_similarity('hello he wants jimmy dinner', 'he went to china to get dumplings')
 
 
 
