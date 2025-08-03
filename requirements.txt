@@ -1,6 +1,5 @@
 pytest
 requests
 beautifulsoup4
-lxml
 importlib
 spacy
